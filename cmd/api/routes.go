@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/justinas/alice"
 )
 
 func (app *application) routes() http.Handler {
@@ -30,5 +31,13 @@ func (app *application) routes() http.Handler {
 	//метрики
 	router.Handler(http.MethodGet, "/debug/vars", expvar.Handler())
 
-	return app.metrics(app.recoverPanic(app.enableCORS(app.rateLimit(app.authenticate(router)))))
+	standard := alice.New(
+		app.metrics,      //обработчик для сбора метрик
+		app.recoverPanic, //обработчик для восстановления после паники
+		app.enableCORS,   //обработчик для поддержки CORS
+		app.rateLimit,    //обработчик для ограничения частоты запросов
+		app.authenticate, //обработчик для аутентификации пользователя
+	)
+
+	return standard.Then(router)
 }
