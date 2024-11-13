@@ -79,3 +79,18 @@ build/api:
 	@echo 'Building cmd/api...'
 	go build -ldflags=${linker_flags} -o=./bin/api ./cmd/api
 	GOOS=linux GOARCH=amd64 go build -ldflags=${linker_flags} -o=./bin/linux_amd64/api ./cmd/api
+
+# ==================================================================================== # 
+# DOCKER 
+# ==================================================================================== #
+
+## docker/build: build the Docker image
+.PHONY: docker/image
+docker/image:
+	@echo 'Building Docker image...'
+	docker-compose build
+
+## docker/run: run the Docker container
+.PHONY: docker/run
+docker/run:
+	docker-compose up

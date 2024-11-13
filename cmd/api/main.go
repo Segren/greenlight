@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"expvar"
 	"flag"
 	"fmt"
@@ -101,6 +102,15 @@ func main() {
 	}
 
 	logger := jsonlog.New(os.Stdout, jsonlog.LevelInfo)
+
+	if cfg.db.dsn == "" {
+		cfg.db.dsn = os.Getenv("GREENLIGHT_DB_DSN")
+		if cfg.db.dsn == "" {
+			logger.PrintFatal(errors.New("должна быть установлена строка подключения к базе данных через флаг -db-dsn или переменную окружения GREENLIGHT_DB_DSN"), nil)
+		}
+	}
+
+	logger.PrintInfo("Connecting to database with DSN: "+cfg.db.dsn, nil)
 
 	db, err := openDB(cfg)
 	if err != nil {
