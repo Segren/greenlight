@@ -54,6 +54,45 @@ type config struct {
 	}
 }
 
+var (
+	instance *config
+	once     sync.Once
+)
+
+// singleton
+func GetConfig() *config {
+	once.Do(func() {
+		instance = &config{}
+		flag.IntVar(&instance.port, "port", 8080, "API server port")
+		flag.StringVar(&instance.env, "env", "development", "Environment (development|staging|production)")
+
+		flag.StringVar(&instance.db.dsn, "db-dsn", "", "PostgreSQL DSN")
+
+		flag.IntVar(&instance.db.maxOpenConns, "db-max-open-conns", 25, "PostgreSQL max open connections")
+		flag.IntVar(&instance.db.maxIdleConns, "db-max-idle-conns", 25, "PostgreSQL max idle connections")
+		flag.StringVar(&instance.db.maxIdleTime, "db-max-idle-time", "15m", "PostgreSQL max connection idle time")
+
+		flag.Float64Var(&instance.limiter.rps, "limiter-rps", 2, "Rate limiter maximum requests per second")
+		flag.IntVar(&instance.limiter.burst, "limiter-burst", 4, "Rate limiter maximum burst")
+		flag.BoolVar(&instance.limiter.enabled, "limiter-enabled", true, "Enable rate limiter")
+
+		//по умолчанию - параметры ящика в Mailtrap
+		flag.StringVar(&instance.smtp.host, "smtp-host", "smtp.mailtrap.io", "SMTP host")
+		flag.IntVar(&instance.smtp.port, "smtp-port", 25, "SMTP port")
+		flag.StringVar(&instance.smtp.username, "smtp-username", "02426e5654fbb8", "SMTP username")
+		flag.StringVar(&instance.smtp.password, "smtp-password", "9d29d9263dabf0", "SMTP password")
+		flag.StringVar(&instance.smtp.sender, "smtp-sender", "Greenlight <noreply@greenlight.example.com>", "SMTP sender email address")
+
+		flag.Func("cors-trusted-origins", "Trusted CORS origins (space separated)", func(val string) error {
+			instance.cors.trustedOrigins = strings.Fields(val)
+			return nil
+		})
+
+		flag.Parse()
+	})
+	return instance
+}
+
 type application struct {
 	config config
 	logger *jsonlog.Logger
@@ -63,37 +102,10 @@ type application struct {
 }
 
 func main() {
-	var cfg config
-
-	flag.IntVar(&cfg.port, "port", 8080, "API server port")
-	flag.StringVar(&cfg.env, "env", "development", "Environment (development|staging|production)")
-
-	flag.StringVar(&cfg.db.dsn, "db-dsn", "", "PostgreSQL DSN")
-
-	flag.IntVar(&cfg.db.maxOpenConns, "db-max-open-conns", 25, "PostgreSQL max open connections")
-	flag.IntVar(&cfg.db.maxIdleConns, "db-max-idle-conns", 25, "PostgreSQL max idle connections")
-	flag.StringVar(&cfg.db.maxIdleTime, "db-max-idle-time", "15m", "PostgreSQL max connection idle time")
-
-	flag.Float64Var(&cfg.limiter.rps, "limiter-rps", 2, "Rate limiter maximum requests per second")
-	flag.IntVar(&cfg.limiter.burst, "limiter-burst", 4, "Rate limiter maximum burst")
-	flag.BoolVar(&cfg.limiter.enabled, "limiter-enabled", true, "Enable rate limiter")
-
-	//по умолчанию - параметры ящика в Mailtrap
-	flag.StringVar(&cfg.smtp.host, "smtp-host", "smtp.mailtrap.io", "SMTP host")
-	flag.IntVar(&cfg.smtp.port, "smtp-port", 25, "SMTP port")
-	flag.StringVar(&cfg.smtp.username, "smtp-username", "02426e5654fbb8", "SMTP username")
-	flag.StringVar(&cfg.smtp.password, "smtp-password", "9d29d9263dabf0", "SMTP password")
-	flag.StringVar(&cfg.smtp.sender, "smtp-sender", "Greenlight <noreply@greenlight.example.com>", "SMTP sender email address")
-
-	flag.Func("cors-trusted-origins", "Trusted CORS origins (space separated)", func(val string) error {
-		cfg.cors.trustedOrigins = strings.Fields(val)
-		return nil
-	})
+	cfg := GetConfig()
 
 	// булево для отображения версии проекта и выхода
 	displayVersion := flag.Bool("version", false, "Display version information and exit")
-
-	flag.Parse()
 
 	if *displayVersion {
 		fmt.Printf("Greenlight version:\t%s\n", version)
@@ -112,7 +124,7 @@ func main() {
 
 	logger.PrintInfo("Connecting to database with DSN: "+cfg.db.dsn, nil)
 
-	db, err := openDB(cfg)
+	db, err := openDB(*cfg)
 	if err != nil {
 		logger.PrintFatal(err, nil)
 	}
@@ -140,7 +152,7 @@ func main() {
 	}))
 
 	app := &application{
-		config: cfg,
+		config: *cfg,
 		logger: logger,
 		models: data.NewModels(db),
 		mailer: mailer.New(cfg.smtp.host, cfg.smtp.port, cfg.smtp.username, cfg.smtp.password, cfg.smtp.sender),

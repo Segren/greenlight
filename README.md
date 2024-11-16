@@ -52,7 +52,7 @@ make db/migrations/up
 ## Запуск проекта:
 Для запуска проекта используйте:
 ```bash
-make run/api
+make run/api ARGS="-port=8080"
 ```
 Или
 ```bash
