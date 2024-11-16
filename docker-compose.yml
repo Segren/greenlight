@@ -39,9 +39,42 @@ services:
     networks:
       - app_network
 
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - app_network
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - app_network
+
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    ports:
+      - "9443:9443" # HTTPS доступ к Portainer
+      - "8000:8000" # API для агента Portainer (опционально)
+    volumes:
+      - portainer-data:/data
+      - /var/run/docker.sock:/var/run/docker.sock # Доступ к Docker API
+    networks:
+      - app_network
+
 networks:
   app_network:
     driver: bridge
 
 volumes:
   db-data:
+  portainer-data:

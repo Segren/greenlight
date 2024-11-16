@@ -1,0 +1,4 @@
+scrape_configs:
+  - job_name: "greenlight"
+    static_configs:
+      - targets: ["localhost:8080"] # Замените порт на порт вашего приложения

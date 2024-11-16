@@ -6,6 +6,7 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/justinas/alice"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func (app *application) routes() http.Handler {
@@ -30,6 +31,8 @@ func (app *application) routes() http.Handler {
 
 	//метрики
 	router.Handler(http.MethodGet, "/debug/vars", expvar.Handler())
+	router.Handler(http.MethodGet, "/metrics", promhttp.Handler())
+	router.HandlerFunc(http.MethodGet, "/health", app.promHealth)
 
 	standard := alice.New(
 		app.metrics,      //обработчик для сбора метрик

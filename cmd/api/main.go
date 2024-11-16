@@ -16,6 +16,7 @@ import (
 	"github.com/Segren/greenlight/internal/data"
 	"github.com/Segren/greenlight/internal/jsonlog"
 	"github.com/Segren/greenlight/internal/mailer"
+	"github.com/prometheus/client_golang/prometheus"
 
 	_ "github.com/lib/pq"
 )
@@ -99,6 +100,31 @@ type application struct {
 	models data.Models
 	mailer mailer.Mailer
 	wg     sync.WaitGroup
+}
+
+// Регистрация Prometheus метрик
+var (
+	requestsTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "http_requests_total",
+			Help: "Total number of HTTP requests",
+		},
+		[]string{"method", "endpoint"},
+	)
+	requestDuration = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "http_request_duration_seconds",
+			Help:    "Histogram of response time for handler in seconds",
+			Buckets: prometheus.DefBuckets,
+		},
+		[]string{"method", "endpoint"},
+	)
+)
+
+func init() {
+	// Регистрация метрик
+	prometheus.MustRegister(requestsTotal)
+	prometheus.MustRegister(requestDuration)
 }
 
 func main() {
