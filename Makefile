@@ -93,4 +93,4 @@ docker/image:
 ## docker/run: run the Docker container
 .PHONY: docker/run
 docker/run:
-	docker-compose up
+	docker-compose up --build
