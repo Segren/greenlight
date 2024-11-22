@@ -27,9 +27,10 @@ var (
 )
 
 type config struct {
-	port int
-	env  string
-	db   struct {
+	port           int
+	env            string
+	displayVersion bool
+	db             struct {
 		dsn          string
 		maxOpenConns int
 		maxIdleConns int
@@ -89,6 +90,9 @@ func GetConfig() *config {
 			return nil
 		})
 
+		// булево для отображения версии проекта и выхода
+		flag.BoolVar(&instance.displayVersion, "version", false, "Display version information and exit")
+
 		flag.Parse()
 	})
 	return instance
@@ -130,10 +134,7 @@ func init() {
 func main() {
 	cfg := GetConfig()
 
-	// булево для отображения версии проекта и выхода
-	displayVersion := flag.Bool("version", false, "Display version information and exit")
-
-	if *displayVersion {
+	if cfg.displayVersion {
 		fmt.Printf("Greenlight version:\t%s\n", version)
 		fmt.Printf("Build time:\t%s\n", buildTime)
 		os.Exit(0)
